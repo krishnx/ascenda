@@ -26,10 +26,10 @@ class MergeDataHandler:
             raw_data = self.data_downloader.download_data()
             DataModel.set_data(raw_data)
 
-            parsed_data = self.data_parser.parse(raw_data)
-            DataModel.set_parsed_data(parsed_data)
+            DataModel.set_parsed_data(self.data_parser.parse(raw_data))
+            parsed_data = DataModel.get_parsed_data()
 
-            self.data_rules.select_data({data['id']: data for data in parsed_data})
+            self.data_rules.select_data(parsed_data)
 
             status = True
         except:

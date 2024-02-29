@@ -1,3 +1,5 @@
+from typing import List, Dict
+
 from model.data import DataModel
 
 
@@ -28,6 +30,15 @@ class DataRules:
         },
     }
 
+    def count_description_score(self, data):
+        score = 0
+        description_lower = data.lower()
+        for keyword in self.RULES['info']['keywords']:
+            if keyword in description_lower:
+                score += 1
+
+        return score
+
     def count_hits(self, data):
         """
         based on the field, calculate the score
@@ -55,7 +66,7 @@ class DataRules:
                 score += total_images * self.RULES['room_images']['score']
 
             if len(data['images'].get('amenities_images', '')) >= self.RULES['amenities_images']['count']:
-                score += data['facilities'] * self.RULES['rooms_images']['score']
+                score += data['amenities'] * self.RULES['rooms_images']['score']
         else:
             score -= 1
 
@@ -79,6 +90,5 @@ class DataRules:
                 continue
 
             data['score'] = score
-            DataModel.set_finalized_data(id_, data)
 
         return True

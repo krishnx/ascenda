@@ -1,63 +1,114 @@
+import copy
 import logging
 
 from common.exceptions import InvalidDataException
+from model.data import DataModel
 
 
 class DataParser:
     """
     handles the logic for data parsing
     """
+    # template
+    DATA = {
+        "id": "",
+        "destination_id": 0,
+        "name": "",
+        "location": {
+            "lat": 0.0,
+            "lng": 0.0,
+            "address": "",
+            "city": "",
+            "country": ""
+        },
+        "description": "",
+        "amenities": {
+            "general": [],
+            "room": []
+        },
+        "images": {
+            "rooms": [],
+            "site": [],
+            "amenities": []
+        },
+        "booking_conditions": []
+    }
+
+    ALLOWED_HOTEL_ID = ['id', 'Id', 'hotel_id', 'HotelId']
+    ALLOWED_DESTINATION_ID = ['destination', 'DestinationId', 'destination_id']
+    ALLOWED_HOTEL_NAME = ['name', 'Name', 'hotel_name', 'HotelName']
+    ALLOWED_DESCRIPTION = ['description', 'Description', 'info', 'details', 'caption']
+    ALLOWED_LOCATION = ['location', 'Location']
+    ALLOWED_ADDRESS = ['address', 'Address']
+    ALLOWED_CITY = ['city', 'City']
+    ALLOWED_COUNTRY = ['country', 'Country']
+    ALLOWED_LAT = ['latitude', 'Latitude', 'lat']
+    ALLOWED_LNG = ['longitude', 'Longitude', 'lng']
+    ALLOWED_AMENITIES = ['facilities', 'Facilities', 'Amenities', 'amenities']
+    ALLOWED_IMAGES = ['images', 'Images', 'Pics', 'pics']
+    ALLOWED_ROOMS = ['Rooms', 'rooms', 'suite']
+    ALLOWED_SITE = ['site']
+    ALLOWED_AMENITIES_GENERAL = ['general', 'General']
+    ALLOWED_AMENITIES_ROOMS = ['room', 'rooms', 'Room', 'Rooms']
+    ALLOWED_IMAGES_AMENITIES = ['Amenities', 'amenities']
+    ALLOWED_IMAGES_SITE = ['site', 'Site']
+    ALLOWED_LINK = ['link', 'Link', 'url', 'URL']
+    ALLOWED_BOOKING_CONDITIONS = ['booking_conditions', 'Booking conditions']
 
     # map of mandatory field in the source data. If any of the field is missing, we reject the data
-    # this can be move to database for on-the-fly changes
+    # this can be moved to database for on-the-fly changes
     MANDATORY_FIELDS = {
         'id': {
-            'allowed': ['id', 'Id', 'hotel_id', 'HotelId'],
+            'allowed': ALLOWED_HOTEL_ID,
             'datatype': str,
         },
-        'destination': {
-            'allowed': ['destination', 'DestinationId', 'destination_id'],
+        'destination_id': {
+            'allowed': ALLOWED_DESTINATION_ID,
             'datatype': (int, str),
         },
         'name': {
-            'allowed': ['name', 'Name', 'hotel_name', 'HotelName'],
+            'allowed': ALLOWED_HOTEL_NAME,
             'datatype': str,
         },
         'description': {
-            'allowed': ['description', 'Description', 'info', 'details'],
+            'allowed': ALLOWED_DESCRIPTION,
             'datatype': str,
         },
-        'address': {
-            'allowed': ['address', 'Address', 'location', 'Location'],
+        'location': {
+            'allowed': ALLOWED_LOCATION,
             'datatype': (str, dict),
         },
     }
 
     # optional fields
-    # this can be move to database for on-the-fly changes
+    # this can be moved to database for on-the-fly changes
     OPTIONAL_FIELDS = {
         'city': {
-            'allowed': ['city', 'City'],
+            'allowed': ALLOWED_CITY,
             'datatype': str,
         },
         'latitude': {
-            'allowed': ['latitude', 'Latitude', 'lat'],
+            'allowed': ALLOWED_LAT,
             'datatype': (int, float),
         },
         'longitude': {
-            'allowed': ['longitude', 'Longitude', 'lng'],
+            'allowed': ALLOWED_LNG,
             'datatype': (int, float),
         },
-        'facilities': {
-            'allowed': ['facilities', 'Facilities', 'Amenities', 'amenities'],
+        'amenities': {
+            'allowed': ALLOWED_AMENITIES,
             'datatype': (str, list),
         },
         'images': {
-            'allowed': ['images', 'Images', 'Pics', 'pics'],
+            'allowed': ALLOWED_IMAGES,
             'datatype': (str, dict)
         },
         'rooms': {
-            'allowed': ['Rooms', 'rooms'],
+            'allowed': ALLOWED_ROOMS,
+            'datatype': (str, list)
+        },
+        'booking_conditions': {
+            'allowed': ALLOWED_BOOKING_CONDITIONS,
             'datatype': (str, list)
         },
     }
@@ -164,22 +215,139 @@ class DataParser:
 
         return transformed_field_name
 
-    def parse_data(self, data):
+    def _update_identifiers(self, temp_info, field_name, sanitized_data):
+        temp_info.update({field_name: sanitized_data})
+
+    def _update_location_info(self, temp_info, field_name, sanitized_data):
+        if not isinstance(sanitized_data, dict):
+            sanitized_data = {field_name: sanitized_data}
+
+        for field, value in sanitized_data.items():
+            if field in self.ALLOWED_ADDRESS:
+                temp_info['location']['address'] = sanitized_data[field]
+
+            elif field in self.ALLOWED_LOCATION:
+                temp_info['location']['location'] = sanitized_data[field]
+
+            elif field in self.ALLOWED_LAT:
+                temp_info['location']['lat'] = sanitized_data[field]
+
+            elif field in self.ALLOWED_LNG:
+                temp_info['location']['lng'] = sanitized_data[field]
+
+            elif field in self.ALLOWED_COUNTRY:
+                temp_info['location']['country'] = sanitized_data[field]
+
+            elif field in self.ALLOWED_CITY:
+                temp_info['location']['city'] = sanitized_data[field]
+
+    def _update_amenities(self, temp_info, field_name, sanitized_data):
+        if not isinstance(sanitized_data, dict):
+            sanitized_data = {'general': sanitized_data}
+
+        for field, value in sanitized_data.items():
+            if field in self.ALLOWED_AMENITIES_GENERAL:
+                temp_info[field_name]['general'] += sanitized_data[field]
+            elif field in self.ALLOWED_AMENITIES_ROOMS:
+                temp_info[field_name]['room'] += sanitized_data[field]
+
+    def _update_images(self, temp_info, field_name, sanitized_data):
+        template = {'link': '', 'description': ''}
+        for field, value in sanitized_data.items():
+            if field in self.ALLOWED_IMAGES_SITE:
+                if 'site' not in temp_info[field_name]:
+                    temp_info[field_name]['site'] = {}
+
+                for detail in sanitized_data[field]:
+                    temp = copy.deepcopy(template)
+                    for k, v in detail.items():
+                        if k in self.ALLOWED_LINK:
+                            temp['link'] = v
+                        elif k in self.ALLOWED_DESCRIPTION:
+                            temp['description'] = v
+
+                    if temp != template and temp not in temp_info[field_name]['site']:
+                        temp_info[field_name]['site'].append(temp)
+
+            elif field in self.ALLOWED_IMAGES_AMENITIES:
+                if 'amenities' not in temp_info[field_name]:
+                    temp_info[field_name]['amenities'] = {}
+
+                for detail in sanitized_data[field]:
+                    temp = copy.deepcopy(template)
+                    for k, v in detail.items():
+                        if k in self.ALLOWED_LINK:
+                            temp['link'] = v
+                        elif k in self.ALLOWED_DESCRIPTION:
+                            temp['description'] = v
+
+                    if temp != template and temp not in temp_info[field_name]['amenities']:
+                        temp_info[field_name]['amenities'].append(temp)
+
+            elif field in self.ALLOWED_ROOMS:
+                if 'rooms' not in temp_info[field_name]:
+                    temp_info[field_name]['rooms'] = []
+
+                for detail in sanitized_data[field]:
+                    temp = copy.deepcopy(template)
+                    for k, v in detail.items():
+                        if k in self.ALLOWED_LINK:
+                            temp['link'] = v
+                        elif k in self.ALLOWED_DESCRIPTION:
+                            temp['description'] = v
+
+                    if temp != template and temp not in temp_info[field_name]['rooms']:
+                        temp_info[field_name]['rooms'].append(temp)
+
+    def _update_booking_conditions(self, temp_info, field_name, sanitized_data):
+        for condition in sanitized_data:
+            if condition in temp_info[field_name]:
+                continue
+
+            temp_info[field_name].append(condition)
+
+    def update_data(self, temp_info, field_name, sanitized_data):
+        if not sanitized_data:
+            return None
+
+        if field_name in self.ALLOWED_HOTEL_ID + self.ALLOWED_DESTINATION_ID + \
+                self.ALLOWED_HOTEL_NAME + self.ALLOWED_DESCRIPTION:
+            self._update_identifiers(temp_info, field_name, sanitized_data)
+
+        elif field_name in self.ALLOWED_LOCATION + self.ALLOWED_ADDRESS + \
+                self.ALLOWED_LAT + self.ALLOWED_LNG + \
+                self.ALLOWED_CITY + self.ALLOWED_COUNTRY:
+            self._update_location_info(temp_info, field_name, sanitized_data)
+
+        elif field_name in self.ALLOWED_AMENITIES:
+            self._update_amenities(temp_info, field_name, sanitized_data)
+
+        elif field_name in self.ALLOWED_IMAGES:
+            self._update_images(temp_info, field_name, sanitized_data)
+
+        elif field_name in self.ALLOWED_BOOKING_CONDITIONS:
+            self._update_booking_conditions(temp_info, field_name, sanitized_data)
+
+    def transform_data(self, data):
         """
         transform keys to the common format
         :return:
         """
         transformed_data = []
         for info in data:
-            temp_info = {}
 
+            existing_id = list(filter(None, [info.get(id_field) for id_field in self.ALLOWED_HOTEL_ID]))
+            if existing_id and DataModel.get_existing_data(existing_id[0]):
+                temp_info = DataModel.get_existing_data(existing_id[0])
+            else:
+                temp_info = copy.deepcopy(self.DATA)
             for field, field_info in info.items():
                 transformed_field_name = self.get_transformed_field_name(field)
 
                 if not transformed_field_name:
                     transformed_field_name = field
 
-                temp_info[transformed_field_name] = self.sanitize_data(field_info)
+                self.update_data(temp_info, transformed_field_name, self.sanitize_data(field_info))
 
             transformed_data.append(temp_info)
 
@@ -191,7 +359,7 @@ class DataParser:
         :param data:
         :return:
         """
-        self.data = self.parse_data(self.data or data)
+        self.data = self.transform_data(self.data or data)
 
         validated_data = []
         for data in self.data:
