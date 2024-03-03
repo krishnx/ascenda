@@ -40,15 +40,19 @@ class DataModel:
         :param data:
         :return:
         """
-        cls.PARSED_DATA = data
+        cls.PARSED_DATA = {info['id']: info for info in data}
 
     @classmethod
-    def get_finalized_data(cls):
+    def get_finalized_data(cls, id_=None):
         """
         return the finalized data for selection.
         this data is in internal format
+        :param id_: id of the hotel
         :return:
         """
+        if id_:
+            return cls.SELECTED_DATA.get(id_)
+
         return cls.SELECTED_DATA
 
     @classmethod
@@ -83,3 +87,7 @@ class DataModel:
             selected_data.append(data)
 
         return selected_data
+
+    @classmethod
+    def get_existing_data(cls, id_):
+        return cls.PARSED_DATA.get(id_, {})

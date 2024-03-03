@@ -341,6 +341,7 @@ class DataParser:
                 temp_info = DataModel.get_existing_data(existing_id[0])
             else:
                 temp_info = copy.deepcopy(self.DATA)
+
             for field, field_info in info.items():
                 transformed_field_name = self.get_transformed_field_name(field)
 

@@ -1,5 +1,3 @@
-from typing import List, Dict
-
 from model.data import DataModel
 
 
