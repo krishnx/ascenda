@@ -1,3 +1,6 @@
+import logging
+
+
 class DataModel:
     """
     DataModel plays the role of database.
@@ -66,7 +69,7 @@ class DataModel:
         cls.SELECTED_DATA[id_] = data
 
     @classmethod
-    def get_selected_data(cls, hotel_id=None):
+    def get_selected_data_by_hotel_id(cls, hotel_id):
         """
         fetch the selected data based on hotel_id
         1. if hotel_id exists, the relevant data will be returned
@@ -75,12 +78,17 @@ class DataModel:
         :param hotel_id:
         :return:
         """
-        if hotel_id:
-            data = cls.SELECTED_DATA.get(hotel_id)
-            if data:
-                data.pop('score', None)
-            return data
+        if not hotel_id:
+            raise ValueError(f'invalid hotel id. hotel_id: {hotel_id}')
 
+        data = cls.SELECTED_DATA.get(hotel_id)
+        if data:
+            data.pop('score', None)
+
+        return data
+
+    @classmethod
+    def get_all_selected_data(cls):
         selected_data = []
         for id_, data in cls.SELECTED_DATA.items():
             data.pop('score', None)

@@ -17,11 +17,23 @@ python app.py
 curl --location 'http://127.0.0.1:5000/merge' \
 --header 'Content-Type: application/json' \
 --data '{
+    "source_url": "https://5f2be0b4ffc88500167b85a0.mockapi.io/suppliers/acme"
+}'
+```
+```commandline
+curl --location 'http://127.0.0.1:5000/merge' \
+--header 'Content-Type: application/json' \
+--data '{
+    "source_url": "https://5f2be0b4ffc88500167b85a0.mockapi.io/suppliers/patagonia"
+}'
+```
+
+```commandline
+curl --location 'http://127.0.0.1:5000/merge' \
+--header 'Content-Type: application/json' \
+--data '{
     "source_url": "https://5f2be0b4ffc88500167b85a0.mockapi.io/suppliers/paperflies"
 }'
-{
-  "status": true
-}
 ```
 6. run the following command to fetch the selected data. `hotel_id` is the optional command. If not passed, it returns data of all the hotels
 ```commandline
@@ -30,4 +42,6 @@ curl --location 'http://127.0.0.1:5000/get-hotel' \
 --data '{
     "hotel_id": "f8c9"
 }'
+7. run the following command to fetch all the hotels info
+
 ```

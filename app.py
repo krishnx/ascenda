@@ -26,11 +26,25 @@ def merge_data():
     return jsonify({'status': status})
 
 
-@app.route('/get-hotel-by-id/', methods=['POST'])
-def get_hotel_by_id():
+@app.route('/get-hotel-info-by-id/', methods=['POST'])
+def get_hotel_info_by_id():
     request_data = request.json
     hotel_id = request_data.get('hotel_id')
-    hotel_info = DataModel.get_selected_data(hotel_id)
+    try:
+        hotel_info = DataModel.get_selected_data_by_hotel_id(hotel_id)
+        if not hotel_info:
+            return jsonify({'warning': f'hotel info with hotel_id {hotel_id} is not available'})
+    except ValueError as ve:
+        return jsonify({'error': str(ve)})
+    except Exception as e:
+        return jsonify({'error': f'unhandled exception occurred: {str(e)}'})
+
+    return jsonify({'data': hotel_info, 'status': 'ok'})
+
+
+@app.route('/get-all-hotels-info/', methods=['POST'])
+def get_all_hotel_info_by_id():
+    hotel_info = DataModel.get_all_selected_data()
 
     return jsonify({'data': hotel_info, 'status': 'ok'})
 
