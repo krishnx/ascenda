@@ -37,11 +37,14 @@ curl --location 'http://127.0.0.1:5000/merge' \
 ```
 6. run the following command to fetch the selected data. `hotel_id` is the optional command. If not passed, it returns data of all the hotels
 ```commandline
-curl --location 'http://127.0.0.1:5000/get-hotel' \
+curl --location 'http://127.0.0.1:5000/get-hotel-info-by-id' \
 --header 'Content-Type: application/json' \
 --data '{
-    "hotel_id": "f8c9"
+    "hotel_id": "SjyX"
 }'
+```
 7. run the following command to fetch all the hotels info
-
+```commandline
+curl --location --request POST 'http://127.0.0.1:5000/get-all-hotels-info' \
+--header 'Content-Type: application/json'
 ```
